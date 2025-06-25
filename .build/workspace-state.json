@@ -1,0 +1,83 @@
+{
+  "object" : {
+    "artifacts" : [
+      {
+        "kind" : "xcframework",
+        "packageRef" : {
+          "identity" : "core-ios-sdk",
+          "kind" : "root",
+          "location" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk",
+          "name" : "core-ios-sdk"
+        },
+        "path" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk/CashfreePG.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "CashfreePG"
+      },
+      {
+        "kind" : "xcframework",
+        "packageRef" : {
+          "identity" : "core-ios-sdk",
+          "kind" : "root",
+          "location" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk",
+          "name" : "core-ios-sdk"
+        },
+        "path" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk/CFNetworkSDK.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "CFNetworkSDK"
+      },
+      {
+        "kind" : "xcframework",
+        "packageRef" : {
+          "identity" : "core-ios-sdk",
+          "kind" : "root",
+          "location" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk",
+          "name" : "core-ios-sdk"
+        },
+        "path" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk/CashfreePGUISDK.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "CashfreePGUISDK"
+      },
+      {
+        "kind" : "xcframework",
+        "packageRef" : {
+          "identity" : "core-ios-sdk",
+          "kind" : "root",
+          "location" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk",
+          "name" : "core-ios-sdk"
+        },
+        "path" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk/CashfreePGCoreSDK.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "CashfreePGCoreSDK"
+      },
+      {
+        "kind" : "xcframework",
+        "packageRef" : {
+          "identity" : "core-ios-sdk",
+          "kind" : "root",
+          "location" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk",
+          "name" : "core-ios-sdk"
+        },
+        "path" : "/Users/shimil.jas/Desktop/codes/core-ios-sdk/CashfreeAnalyticsSDK.xcframework",
+        "source" : {
+          "type" : "local"
+        },
+        "targetName" : "CashfreeAnalyticsSDK"
+      }
+    ],
+    "dependencies" : [
+
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

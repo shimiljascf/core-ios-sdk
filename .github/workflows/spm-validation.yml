@@ -1,0 +1,113 @@
+name: Swift Package Manager Validation
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  release:
+    types: [published]
+
+jobs:
+  validate-spm:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+      
+    - name: Validate Swift Package
+      run: |
+        swift package resolve
+        swift package dump-package
+        
+    - name: Build Swift Package
+      run: |
+        swift build -c release
+        
+    - name: Test Swift Package Resolution
+      run: |
+        # Create a temporary test project to validate package resolution
+        mkdir -p /tmp/spm-test
+        cd /tmp/spm-test
+        
+        cat > Package.swift << EOF
+        // swift-tools-version:5.7
+        import PackageDescription
+        
+        let package = Package(
+            name: "SPMTest",
+            platforms: [.iOS(.v12)],
+            products: [
+                .library(name: "SPMTest", targets: ["SPMTest"]),
+            ],
+            dependencies: [
+                .package(path: "${{ github.workspace }}")
+            ],
+            targets: [
+                .target(
+                    name: "SPMTest",
+                    dependencies: [
+                        .product(name: "CashfreePG", package: "core-ios-sdk")
+                    ]
+                ),
+            ]
+        )
+        EOF
+        
+        mkdir -p Sources/SPMTest
+        echo "import CashfreePG" > Sources/SPMTest/SPMTest.swift
+        
+        swift package resolve
+        echo "✅ Swift Package Manager validation successful"
+        
+  validate-xcframeworks:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate XCFrameworks
+      run: |
+        echo "Validating XCFramework structures..."
+        
+        frameworks=("CashfreePG" "CashfreePGCoreSDK" "CashfreePGUISDK" "CashfreeAnalyticsSDK" "CFNetworkSDK")
+        
+        for framework in "${frameworks[@]}"; do
+          echo "Checking ${framework}.xcframework..."
+          if [ -d "${framework}.xcframework" ]; then
+            echo "✅ ${framework}.xcframework exists"
+            
+            # Check for required architectures
+            if [ -d "${framework}.xcframework/ios-arm64" ]; then
+              echo "✅ ${framework} has arm64 architecture"
+            else
+              echo "❌ ${framework} missing arm64 architecture"
+              exit 1
+            fi
+            
+            if [ -d "${framework}.xcframework/ios-arm64_x86_64-simulator" ]; then
+              echo "✅ ${framework} has simulator architecture"
+            else
+              echo "❌ ${framework} missing simulator architecture"
+              exit 1
+            fi
+            
+            # Check Info.plist
+            if [ -f "${framework}.xcframework/Info.plist" ]; then
+              echo "✅ ${framework} has Info.plist"
+            else
+              echo "❌ ${framework} missing Info.plist"
+              exit 1
+            fi
+          else
+            echo "❌ ${framework}.xcframework not found"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All XCFrameworks validated successfully"

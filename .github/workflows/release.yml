@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  create-release:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        
+    - name: Validate Swift Package
+      run: |
+        swift package resolve
+        swift package dump-package
+        swift build -c release
+        
+    - name: Create ZIP archives for XCFrameworks
+      run: |
+        echo "Creating ZIP archives for distribution..."
+        
+        frameworks=("CashfreePG" "CashfreePGCoreSDK" "CashfreePGUISDK" "CashfreeAnalyticsSDK" "CFNetworkSDK")
+        
+        for framework in "${frameworks[@]}"; do
+          if [ -d "${framework}.xcframework" ]; then
+            echo "Creating ${framework}.xcframework.zip..."
+            zip -r "${framework}.xcframework.zip" "${framework}.xcframework"
+          fi
+        done
+        
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+        cat > release_notes.md << EOF
+        ## Cashfree iOS SDK ${{ steps.version.outputs.version }}
+        
+        ### Installation
+        
+        #### Swift Package Manager
+        \`\`\`
+        .package(url: "https://github.com/cashfree/core-ios-sdk.git", from: "${{ steps.version.outputs.version }}")
+        \`\`\`
+        
+        #### CocoaPods
+        \`\`\`ruby
+        pod 'CashfreePG', '~> ${{ steps.version.outputs.version }}'
+        \`\`\`
+        
+        ### What's Included
+        
+        This release includes the following frameworks:
+        - CashfreePG.xcframework - Complete Payment Gateway SDK
+        - CashfreePGCoreSDK.xcframework - Core Payment SDK
+        - CashfreePGUISDK.xcframework - UI Components SDK
+        - CashfreeAnalyticsSDK.xcframework - Analytics SDK
+        - CFNetworkSDK.xcframework - Networking SDK
+        
+        ### Requirements
+        - iOS 12.0+
+        - Xcode 14.0+
+        - Swift 5.7+
+        
+        ### Documentation
+        For detailed integration guide, visit: https://docs.cashfree.com/docs/ios-native
+        EOF
+        
+        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+        cat release_notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        release_name: Cashfree iOS SDK ${{ steps.version.outputs.version }}
+        body: ${{ steps.release_notes.outputs.release_notes }}
+        draft: false
+        prerelease: false
+        
+    - name: Upload XCFramework Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./CashfreePG.xcframework.zip
+        asset_name: CashfreePG.xcframework.zip
+        asset_content_type: application/zip
