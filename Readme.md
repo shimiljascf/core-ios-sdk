@@ -9,25 +9,184 @@
 
 Sample integration project for Cashfree Payment Gateway's iOS SDK, facilitating seamless and secure payment processing within your iOS application.
 
+## 🚀 Quick Start
 
-## Documentation
+### Requirements
+- iOS 12.0+
+- Xcode 14.0+
+- Swift 5.7+
 
-The Cashfree iOS SDK allows you to integrate Cashfree Payment Gateway into your application and start collecting payments from your customers. It has been designed to minimise the complexity of handling and integrating payments in your iOS project.
+## 📦 Installation
 
-### Getting Started
+### Swift Package Manager (Recommended)
 
-Please replace the values for orderId, token (Payment Session ID) and environment in the example iOS project inside the repo and run the application.
+The easiest way to integrate Cashfree iOS SDK is through Swift Package Manager:
+
+#### **Method 1: Xcode GUI**
+1. Open your project in Xcode
+2. Go to **File** > **Add Package Dependencies**
+3. Enter the repository URL: `https://github.com/cashfree/core-ios-sdk.git`
+4. Select the version rule (recommend "Up to Next Major Version")
+5. Choose the products you need:
+   - `CashfreePG` - Complete Payment Gateway SDK (recommended)
+   - `CashfreePGCoreSDK` - Core payment processing
+   - `CashfreePGUISDK` - UI components
+   - `CashfreeAnalyticsSDK` - Analytics and tracking
+   - `CFNetworkSDK` - Networking layer
+
+#### **Method 2: Package.swift**
+Add the following to your `Package.swift` file:
 
 ```swift
-    static var environment: CFENVIRONMENT = .SANDBOX
-    static let payment_session_id = "payment_session_id"
-    static let order_id = "order_id"
-
+dependencies: [
+    .package(url: "https://github.com/cashfree/core-ios-sdk.git", from: "2.2.4")
+]
 ```
 
+Then add to your target dependencies:
 
-| Please refer our official iOS documentation [here](https://docs.cashfree.com/docs/ios-native).
+```swift
+.target(
+    name: "YourApp",
+    dependencies: [
+        .product(name: "CashfreePG", package: "core-ios-sdk")
+    ]
+)
+```
 
+### CocoaPods
+
+Add the following to your `Podfile`:
+
+```ruby
+pod 'CashfreePG', '~> 2.2.4'
+```
+
+Then run:
+```bash
+pod install
+```
+
+## 🏗️ Framework Architecture
+
+The Cashfree iOS SDK is built with a modular architecture:
+
+```
+CashfreePG (Main SDK)
+    ├── CashfreePGUISDK (UI Components)
+    │   └── CashfreePGCoreSDK (Core Payment Logic)
+    │       └── CashfreeAnalyticsSDK (Analytics & Tracking)
+    │           └── CFNetworkSDK (Networking Layer)
+```
+
+## 🔧 Usage
+
+### Import the SDK
+
+```swift
+import CashfreePG
+```
+
+### Initialize Payment Session
+
+```swift
+// Create payment session
+let session = CFSession.CFSessionBuilder()
+    .setEnvironment(.sandbox) // or .production
+    .setOrderId("ORDER_ID")
+    .setOrderAmount(100.0)
+    .setOrderCurrency("INR")
+    .setCustomerDetails(customerName: "John Doe", 
+                       customerPhone: "9999999999", 
+                       customerEmail: "john@example.com")
+    .build()
+
+// Create payment object
+let cashfreePG = CFPaymentGatewayService.getInstance()
+
+// Set callback
+cashfreePG.setCallback(self)
+
+// Start payment
+cashfreePG.doPayment(session, in: self)
+```
+
+### Handle Payment Callbacks
+
+```swift
+extension ViewController: CFResponseDelegate {
+    func onPaymentVerify(_ orderID: String) {
+        // Payment successful - verify on your server
+        print("Payment successful for order: \(orderID)")
+    }
+    
+    func onPaymentFailure(_ cfErrorResponse: CFErrorResponse, _ orderID: String) {
+        // Payment failed
+        print("Payment failed: \(cfErrorResponse.getMessage())")
+    }
+}
+```
+
+## 📱 Sample Applications
+
+This repository includes comprehensive sample applications:
+
+- **[Swift Sample Application](Swift+Sample+Application/)** - UIKit implementation
+- **[SwiftUI Sample Application](SwiftUI+Sample+Application/)** - SwiftUI implementation
+
+## 📚 Documentation
+
+- **[SPM Integration Guide](SPM_INTEGRATION_GUIDE.md)** - Detailed SPM setup instructions
+- **[API Documentation](https://docs.cashfree.com/docs/ios)** - Complete API reference  
+- **[Migration Guide](https://docs.cashfree.com/docs/ios-sdk-migration-guide)** - Upgrading from older versions
+
+## 🛠️ Development
+
+### For Contributors
+
+If you want to contribute or modify the SDK:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/cashfree/core-ios-sdk.git
+cd core-ios-sdk
+```
+
+2. Open the project in Xcode or use Swift Package Manager:
+```bash
+swift package resolve
+swift build
+```
+
+### Release Process
+
+We use automated releases with GitHub Actions. To create a new release:
+
+1. Update version using the script:
+```bash
+./scripts/update_version.sh 2.2.5
+```
+
+2. The script will:
+   - Update all podspec files
+   - Create a git tag
+   - Push to GitHub
+   - Trigger automated release workflow
+
+### Setting Up Your Own Repository
+
+To set up this SDK in your own GitHub repository:
+
+1. Run the setup script:
+```bash
+./scripts/github_setup.sh
+```
+
+2. Follow the interactive prompts to:
+   - Create GitHub repository
+   - Configure remote origin
+   - Make initial commit
+   - Create first release
 
 ## Getting help
 
