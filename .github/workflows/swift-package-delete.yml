@@ -1,0 +1,95 @@
+name: Swift Package Registry - Delete Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: 'Version to delete (e.g., 1.0.11)'
+        required: true
+        type: string
+      confirm_deletion:
+        description: 'Type "DELETE" to confirm'
+        required: true
+        type: string
+
+jobs:
+  delete-package:
+    name: Delete Package from Registry
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Validate Confirmation
+      run: |
+        if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+          echo "❌ Deletion not confirmed. You must type 'DELETE' exactly."
+          exit 1
+        fi
+        echo "✅ Deletion confirmed"
+    
+    - name: Validate Version Format
+      run: |
+        version="${{ github.event.inputs.package_version }}"
+        if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Invalid version format. Use semantic versioning (e.g., 1.0.11)"
+          exit 1
+        fi
+        echo "✅ Version format is valid: $version"
+    
+    - name: Check Package Registry
+      run: |
+        echo "🔍 Checking if package exists in registry..."
+        package_name="CashfreePG"
+        version="${{ github.event.inputs.package_version }}"
+        
+        # Check if package exists on Swift Package Registry
+        registry_url="https://swiftpackageregistry.com/search?q=$package_name"
+        echo "📋 Registry URL: $registry_url"
+        echo "📦 Package: $package_name"
+        echo "📌 Version: $version"
+        
+        echo "⚠️ Note: Swift Package Registry doesn't provide direct deletion API"
+        echo "ℹ️ Manual steps required for deletion (see summary)"
+    
+    - name: Delete Git Tag (Optional)
+      run: |
+        echo "🗑️ Deleting git tag: ${{ github.event.inputs.package_version }}"
+        echo "Note: This would run: git push --delete origin ${{ github.event.inputs.package_version }}"
+        echo "⚠️ Uncomment the lines below to actually delete the git tag:"
+        echo ""
+        echo "# git push --delete origin ${{ github.event.inputs.package_version }}"
+        echo "# git tag -d ${{ github.event.inputs.package_version }}"
+        echo ""
+        echo "✅ Tag deletion command prepared (not executed)"
+    
+    - name: Deletion Summary
+      run: |
+        echo "## 🗑️ Package Deletion Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Package Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package**: CashfreePG" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ github.event.inputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🚨 Manual Steps Required" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Swift Package Registry doesn't provide automated deletion.** You need to:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Contact Registry Admin:**" >> $GITHUB_STEP_SUMMARY
+        echo "   - Visit: https://github.com/twodayslate/swift-package-registry/issues" >> $GITHUB_STEP_SUMMARY
+        echo "   - Create issue requesting deletion of CashfreePG version ${{ github.event.inputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "2. **Delete Git Tag (Optional):**" >> $GITHUB_STEP_SUMMARY
+        echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "   git push --delete origin ${{ github.event.inputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "   git tag -d ${{ github.event.inputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Delete GitHub Release (Optional):**" >> $GITHUB_STEP_SUMMARY
+        echo "   - Go to: https://github.com/${{ github.repository }}/releases" >> $GITHUB_STEP_SUMMARY
+        echo "   - Find release ${{ github.event.inputs.package_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "   - Click Delete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ⚠️ Important Notes" >> $GITHUB_STEP_SUMMARY
+        echo "- Deleting from registry doesn't automatically delete git tags/releases" >> $GITHUB_STEP_SUMMARY
+        echo "- Users who already downloaded the package will still have it cached" >> $GITHUB_STEP_SUMMARY
+        echo "- Consider creating a new version instead of deleting" >> $GITHUB_STEP_SUMMARY

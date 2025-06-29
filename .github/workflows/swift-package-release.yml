@@ -1,0 +1,112 @@
+name: Swift Package Registry Sync
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+jobs:
+  sync-to-registry:
+    name: Sync Package to Swift Registry
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Get Tag and Version
+      id: version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          tag_name=${GITHUB_REF#refs/tags/}
+          echo "tag=$tag_name" >> $GITHUB_OUTPUT
+          echo "version=$tag_name" >> $GITHUB_OUTPUT
+        else
+          echo "tag=manual-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          echo "version=0.0.0" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Print Package Information
+      run: |
+        echo "📦 Package: CashfreePG"
+        echo "📌 Version: ${{ steps.version.outputs.version }}"
+        echo "🏷️ Tag: ${{ steps.version.outputs.tag }}"
+    
+    - name: Validate Package.swift
+      run: |
+        echo "🔍 Validating Package.swift..."
+        swift package dump-package > /dev/null
+        echo "✅ Package.swift is valid"
+    
+    - name: Resolve Dependencies
+      run: |
+        echo "📦 Resolving dependencies..."
+        swift package resolve
+        echo "✅ Dependencies resolved"
+    
+    - name: Build Package
+      run: |
+        echo "🔨 Building Swift package..."
+        swift build
+        echo "✅ Package built successfully"
+    
+    - name: Run Tests
+      run: |
+        echo "🧪 Running package tests..."
+        if swift package describe | grep -q "testTargets"; then
+          swift test
+          echo "✅ All tests passed"
+        else
+          echo "ℹ️ No tests found in package"
+        fi
+    
+    - name: Validate XCFrameworks
+      run: |
+        echo "🔍 Validating XCFrameworks..."
+        for framework in *.xcframework; do
+          if [ -d "$framework" ]; then
+            echo "📱 Validating $framework..."
+            if [ -f "$framework/Info.plist" ]; then
+              echo "✅ $framework has valid Info.plist"
+            else
+              echo "❌ $framework missing Info.plist"
+              exit 1
+            fi
+          fi
+        done
+        echo "✅ All XCFrameworks validated"
+    
+    - name: Remove Package Archive
+      run: |
+        echo "�️ Cleaning up package archive..."
+        rm -f "CashfreePG-${{ steps.version.outputs.version }}.tar.gz"
+        echo "✅ Archive removed"
+    
+    - name: Publish to Swift Package Registry
+      uses: twodayslate/swift-package-registry@v0.0.2
+      with:
+        source: '.'
+    
+    - name: Summary
+      run: |
+        echo "## 🎉 CashfreePG SDK ${{ steps.version.outputs.version }} Released" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Completed Steps" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package validated" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Dependencies resolved" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Build successful" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ XCFrameworks validated" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Published to Swift Package Registry" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🚀 Available via" >> $GITHUB_STEP_SUMMARY
+        echo "- Swift Package Manager (GitHub)" >> $GITHUB_STEP_SUMMARY
+        echo "- Swift Package Registry" >> $GITHUB_STEP_SUMMARY
+        echo "- CocoaPods" >> $GITHUB_STEP_SUMMARY

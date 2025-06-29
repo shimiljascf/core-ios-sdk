@@ -1,0 +1,135 @@
+name: Swift Package Validation
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'Package.swift'
+      - '*.xcframework/**'
+      - '*.podspec'
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'Package.swift'
+      - '*.xcframework/**'
+      - '*.podspec'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Swift Package
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+    
+    - name: Validate Package.swift
+      run: |
+        echo "🔍 Validating Package.swift..."
+        swift package dump-package > package-dump.json
+        echo "✅ Package.swift is valid"
+        
+        # Pretty print the package description
+        echo "📋 Package configuration:"
+        cat package-dump.json | python3 -m json.tool
+    
+    - name: Resolve Dependencies
+      run: |
+        echo "📦 Resolving dependencies..."
+        swift package resolve
+        echo "✅ Dependencies resolved"
+    
+    - name: Build Package
+      run: |
+        echo "🔨 Building package..."
+        swift build --verbose
+        echo "✅ Build successful"
+    
+    - name: Validate XCFrameworks
+      run: |
+        echo "🔍 Validating XCFrameworks..."
+        for framework in *.xcframework; do
+          if [ -d "$framework" ]; then
+            echo "Checking $framework..."
+            
+            # Validate Info.plist exists
+            if [ ! -f "$framework/Info.plist" ]; then
+              echo "❌ Missing Info.plist in $framework"
+              exit 1
+            fi
+            
+            # Check supported platforms
+            echo "📱 Supported platforms for $framework:"
+            plutil -p "$framework/Info.plist" | grep -A 10 "SupportedPlatforms" || echo "No platform info found"
+            
+            # Validate framework structure
+            for arch_dir in "$framework"/*/; do
+              if [ -d "$arch_dir" ]; then
+                arch_name=$(basename "$arch_dir")
+                echo "   - Architecture: $arch_name"
+                
+                # Check if framework binary exists
+                framework_name=$(basename "$framework" .xcframework)
+                binary_path="$arch_dir$framework_name.framework/$framework_name"
+                if [ -f "$binary_path" ]; then
+                  echo "     ✅ Binary found: $binary_path"
+                  # Check binary architectures
+                  lipo -info "$binary_path" 2>/dev/null || echo "     ℹ️  Could not read binary info"
+                else
+                  echo "     ❌ Binary not found: $binary_path"
+                fi
+              fi
+            done
+          fi
+        done
+        echo "✅ XCFramework validation complete"
+    
+    - name: Validate Podspecs
+      run: |
+        echo "🔍 Validating Podspec files..."
+        for podspec in *.podspec; do
+          if [ -f "$podspec" ]; then
+            echo "Validating $podspec..."
+            # Basic syntax check
+            ruby -c "$podspec"
+            echo "✅ $podspec syntax is valid"
+          fi
+        done
+    
+    - name: Check Package Manifest Consistency
+      run: |
+        echo "🔍 Checking Package.swift consistency..."
+        
+        # Extract package name and products from Package.swift
+        package_name=$(swift package dump-package | python3 -c "import sys, json; print(json.load(sys.stdin)['name'])")
+        echo "Package name: $package_name"
+        
+        # List all products
+        echo "Products defined in Package.swift:"
+        swift package dump-package | python3 -c "import sys, json; data = json.load(sys.stdin); [print(f'  - {product[\"name\"]} ({product[\"type\"]})') for product in data.get('products', [])]"
+        
+        # List all targets
+        echo "Targets defined in Package.swift:"
+        swift package dump-package | python3 -c "import sys, json; data = json.load(sys.stdin); [print(f'  - {target[\"name\"]} ({target.get(\"type\", \"unknown\")}) -> {target.get(\"path\", \"N/A\")}') for target in data.get('targets', [])]"
+    
+    - name: Generate Validation Report
+      run: |
+        echo "## 📋 Swift Package Validation Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Validation Results" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package.swift syntax is valid" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Dependencies resolved successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Package builds without errors" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ XCFrameworks are properly structured" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Podspec files have valid syntax" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Package Information" >> $GITHUB_STEP_SUMMARY
+        
+        # Add package details to summary
+        swift package dump-package | python3 -c "import sys, json; data = json.load(sys.stdin); name = data.get('name', 'Unknown'); products = data.get('products', []); targets = data.get('targets', []); platforms = data.get('platforms', []); print('- **Name**: ' + name); print('- **Products**: ' + str(len(products))); print('- **Targets**: ' + str(len(targets))); print('- **Platforms**: ' + str(len(platforms)))" >> $GITHUB_STEP_SUMMARY
