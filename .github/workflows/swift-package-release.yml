@@ -54,18 +54,43 @@ jobs:
     
     - name: Build Package
       run: |
-        echo "🔨 Building Swift package..."
-        swift build
-        echo "✅ Package built successfully"
+        echo "🔨 Validating Swift package..."
+        
+        # Check if package contains buildable targets
+        has_buildable=$(swift package dump-package | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        buildable_targets = [t for t in data.get('targets', []) if t.get('type') != 'binary']
+        print('true' if buildable_targets else 'false')
+        ")
+        
+        if [ "$has_buildable" = "true" ]; then
+          echo "📦 Found buildable targets, running swift build..."
+          swift build
+          echo "✅ Package built successfully"
+        else
+          echo "📦 Package contains only binary targets (XCFrameworks)"
+          echo "✅ Binary package validation - no build required"
+        fi
     
     - name: Run Tests
       run: |
         echo "🧪 Running package tests..."
-        if swift package describe | grep -q "testTargets"; then
+        
+        # Check if package has test targets
+        has_tests=$(swift package dump-package | python3 -c "
+        import sys, json
+        data = json.load(sys.stdin)
+        test_targets = [t for t in data.get('targets', []) if t.get('type') == 'test']
+        print('true' if test_targets else 'false')
+        ")
+        
+        if [ "$has_tests" = "true" ]; then
           swift test
           echo "✅ All tests passed"
         else
-          echo "ℹ️ No tests found in package"
+          echo "ℹ️ No test targets found in binary package"
+          echo "✅ Binary package - tests not applicable"
         fi
     
     - name: Validate XCFrameworks
@@ -102,7 +127,7 @@ jobs:
         echo "### ✅ Completed Steps" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Package validated" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Dependencies resolved" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Build successful" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Binary package validation successful" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ XCFrameworks validated" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Published to Swift Package Registry" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
