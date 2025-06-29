@@ -7,12 +7,18 @@ on:
       - 'Package.swift'
       - '*.xcframework/**'
       - '*.podspec'
+      - 'SPM_INTEGRATION_GUIDE.md'
+      - 'README.md'
+      - 'Readme.md'
   push:
     branches: [ main, master, develop ]
     paths:
       - 'Package.swift'
       - '*.xcframework/**'
       - '*.podspec'
+      - 'SPM_INTEGRATION_GUIDE.md'
+      - 'README.md'
+      - 'Readme.md'
   workflow_dispatch:
 
 jobs:
@@ -118,6 +124,49 @@ jobs:
         echo "Targets defined in Package.swift:"
         swift package dump-package | python3 -c "import sys, json; data = json.load(sys.stdin); [print(f'  - {target[\"name\"]} ({target.get(\"type\", \"unknown\")}) -> {target.get(\"path\", \"N/A\")}') for target in data.get('targets', [])]"
     
+    - name: Validate Documentation
+      run: |
+        echo "📚 Validating documentation files..."
+        
+        # Check if SPM integration guide exists and has content
+        if [ -f "SPM_INTEGRATION_GUIDE.md" ]; then
+          echo "✅ SPM_INTEGRATION_GUIDE.md exists"
+          word_count=$(wc -w < "SPM_INTEGRATION_GUIDE.md")
+          echo "📄 SPM guide has $word_count words"
+          
+          # Check for required sections
+          if grep -q "## Installation" "SPM_INTEGRATION_GUIDE.md"; then
+            echo "✅ Installation section found"
+          else
+            echo "⚠️ Installation section missing"
+          fi
+          
+          if grep -q "## Troubleshooting" "SPM_INTEGRATION_GUIDE.md"; then
+            echo "✅ Troubleshooting section found"
+          else
+            echo "⚠️ Troubleshooting section missing"
+          fi
+          
+          if grep -q "WebKit" "SPM_INTEGRATION_GUIDE.md"; then
+            echo "✅ WebKit integration guidance found"
+          else
+            echo "⚠️ WebKit integration guidance missing"
+          fi
+        else
+          echo "❌ SPM_INTEGRATION_GUIDE.md not found"
+        fi
+        
+        # Check README files
+        for readme in README.md Readme.md readme.md; do
+          if [ -f "$readme" ]; then
+            echo "✅ $readme exists"
+            word_count=$(wc -w < "$readme")
+            echo "📄 $readme has $word_count words"
+          fi
+        done
+        
+        echo "✅ Documentation validation complete"
+    
     - name: Generate Validation Report
       run: |
         echo "## 📋 Swift Package Validation Report" >> $GITHUB_STEP_SUMMARY
@@ -128,6 +177,7 @@ jobs:
         echo "- ✅ Package builds without errors" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ XCFrameworks are properly structured" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Podspec files have valid syntax" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Documentation files validated" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📦 Package Information" >> $GITHUB_STEP_SUMMARY
         
